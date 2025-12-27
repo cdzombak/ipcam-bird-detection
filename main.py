@@ -232,7 +232,7 @@ def main() -> int:
     pipeline = DetectionPipeline(
         model_path=config.detection.model,
         confidence_threshold=config.detection.confidence_threshold,
-        frame_time=config.detection.frame_time,
+        frame_times=config.detection.frame_times,
         min_area_percent=config.detection.min_area_percent,
         max_area_percent=config.detection.max_area_percent,
     )

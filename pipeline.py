@@ -7,8 +7,8 @@ any specific video source (API, local file, etc.).
 from dataclasses import dataclass
 from pathlib import Path
 
-from detector import BirdDetector, DetectionResult
-from frame_extractor import ExtractionResult, extract_frame
+from detector import BirdDetector
+from frame_extractor import extract_frames
 
 
 @dataclass
@@ -22,7 +22,7 @@ class PipelineResult:
 
     # Video/frame metadata
     video_duration: float | None = None
-    frame_time: float | None = None
+    frame_time: float | None = None  # Frame time where bird was detected
 
     # Error info (if failed)
     error: str | None = None
@@ -43,7 +43,7 @@ class DetectionPipeline:
         self,
         model_path: str = "yolo11n.pt",
         confidence_threshold: float = 0.5,
-        frame_time: float = 6.0,
+        frame_times: list[float] | None = None,
         min_area_percent: float | None = None,
         max_area_percent: float | None = None,
     ):
@@ -52,7 +52,7 @@ class DetectionPipeline:
         Args:
             model_path: Path to YOLO model or model name.
             confidence_threshold: Minimum confidence for detections.
-            frame_time: Target frame time in seconds (uses 50% if video shorter).
+            frame_times: Target frame times in seconds (uses 50% if video shorter).
             min_area_percent: Minimum bird area as % of frame (None = no minimum).
             max_area_percent: Maximum bird area as % of frame (None = no maximum).
         """
@@ -62,10 +62,14 @@ class DetectionPipeline:
             min_area_percent=min_area_percent,
             max_area_percent=max_area_percent,
         )
-        self.frame_time = frame_time
+        self.frame_times = frame_times if frame_times is not None else [6.0]
 
     def process(self, video_path: Path) -> PipelineResult:
         """Process a video file through the detection pipeline.
+
+        Extracts frames at each configured time and checks for birds.
+        If any frame contains a bird, returns the detection with the
+        largest bird (by area percentage).
 
         Args:
             video_path: Path to the video file.
@@ -73,23 +77,46 @@ class DetectionPipeline:
         Returns:
             PipelineResult with detection results or error info.
         """
-        frame_path = None
+        frame_paths = []
 
         try:
-            # Extract frame
-            extraction = extract_frame(video_path, target_time=self.frame_time)
-            frame_path = extraction.frame_path
+            # Extract frames
+            extraction = extract_frames(video_path, target_times=self.frame_times)
+            frame_paths = [f.frame_path for f in extraction.frames]
 
-            # Run detection
-            detection = self.detector.detect(frame_path)
+            # Run detection on each frame, track best result
+            best_detection = None
+            best_frame_time = None
 
-            return PipelineResult(
-                has_bird=detection.has_bird,
-                confidence=detection.confidence,
-                bird_area_percent=detection.bird_area_percent,
-                video_duration=extraction.duration,
-                frame_time=extraction.frame_time,
-            )
+            for frame_result in extraction.frames:
+                detection = self.detector.detect(frame_result.frame_path)
+
+                if detection.has_bird:
+                    # Keep the detection with the largest bird
+                    if best_detection is None or (
+                        detection.bird_area_percent is not None
+                        and (
+                            best_detection.bird_area_percent is None
+                            or detection.bird_area_percent > best_detection.bird_area_percent
+                        )
+                    ):
+                        best_detection = detection
+                        best_frame_time = frame_result.frame_time
+
+            if best_detection is not None:
+                return PipelineResult(
+                    has_bird=True,
+                    confidence=best_detection.confidence,
+                    bird_area_percent=best_detection.bird_area_percent,
+                    video_duration=extraction.duration,
+                    frame_time=best_frame_time,
+                )
+            else:
+                return PipelineResult(
+                    has_bird=False,
+                    video_duration=extraction.duration,
+                    frame_time=extraction.frames[0].frame_time if extraction.frames else None,
+                )
 
         except Exception as e:
             return PipelineResult(
@@ -98,6 +125,7 @@ class DetectionPipeline:
             )
 
         finally:
-            # Clean up extracted frame
-            if frame_path and frame_path.exists():
-                frame_path.unlink(missing_ok=True)
+            # Clean up extracted frames
+            for frame_path in frame_paths:
+                if frame_path.exists():
+                    frame_path.unlink(missing_ok=True)

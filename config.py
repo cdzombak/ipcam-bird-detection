@@ -20,7 +20,7 @@ class DetectionConfig:
 
     model: str = "yolo11n.pt"
     confidence_threshold: float = 0.5
-    frame_time: float = 6.0
+    frame_times: list[float] = field(default_factory=lambda: [6.0])
     min_area_percent: float | None = None  # Minimum bird area as % of frame
     max_area_percent: float | None = None  # Maximum bird area as % of frame
 
@@ -85,10 +85,21 @@ def load_config(config_path: str | Path) -> Config:
     )
 
     detection_data = data.get("detection", {})
+
+    # Support both frame_times (list) and frame_time (single value, for backwards compat)
+    if "frame_times" in detection_data:
+        frame_times = detection_data["frame_times"]
+        if not isinstance(frame_times, list):
+            frame_times = [frame_times]
+    elif "frame_time" in detection_data:
+        frame_times = [detection_data["frame_time"]]
+    else:
+        frame_times = [6.0]
+
     detection_config = DetectionConfig(
         model=detection_data.get("model", "yolo11n.pt"),
         confidence_threshold=detection_data.get("confidence_threshold", 0.5),
-        frame_time=detection_data.get("frame_time", 6.0),
+        frame_times=frame_times,
         min_area_percent=detection_data.get("min_area_percent"),
         max_area_percent=detection_data.get("max_area_percent"),
     )

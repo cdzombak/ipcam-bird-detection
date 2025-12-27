@@ -1,6 +1,7 @@
 """Video frame extraction using ffmpeg."""
 
 import json
+import os
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -18,6 +19,14 @@ class ExtractionResult:
     frame_path: Path
     duration: float
     frame_time: float
+
+
+@dataclass
+class MultiFrameExtractionResult:
+    """Result of extracting multiple frames."""
+
+    frames: list[ExtractionResult]
+    duration: float
 
 
 def get_video_duration(video_path: Path) -> float:
@@ -83,9 +92,6 @@ def extract_frame(
 
     # Create temp file for the frame
     fd, frame_path = tempfile.mkstemp(suffix=".jpg")
-    # Close the file descriptor since ffmpeg will write to the path
-    import os
-
     os.close(fd)
     frame_path = Path(frame_path)
 
@@ -122,4 +128,90 @@ def extract_frame(
         frame_path=frame_path,
         duration=duration,
         frame_time=frame_time,
+    )
+
+
+def extract_frames(
+    video_path: Path,
+    target_times: list[float],
+) -> MultiFrameExtractionResult:
+    """Extract multiple frames from a video.
+
+    For each target time, extracts the frame at that time, or at 50% of
+    video duration if the video is shorter than the target time.
+
+    Args:
+        video_path: Path to the video file.
+        target_times: List of target times in seconds.
+
+    Returns:
+        MultiFrameExtractionResult with list of frames and video duration.
+
+    Raises:
+        FrameExtractionError: If extraction fails.
+    """
+    duration = get_video_duration(video_path)
+    frames = []
+
+    for target_time in target_times:
+        # Determine actual frame time
+        if duration < target_time:
+            frame_time = duration * 0.5
+        else:
+            frame_time = target_time
+
+        # Skip if we already extracted a frame at this time
+        if any(abs(f.frame_time - frame_time) < 0.1 for f in frames):
+            continue
+
+        # Create temp file for the frame
+        fd, frame_path = tempfile.mkstemp(suffix=".jpg")
+        os.close(fd)
+        frame_path = Path(frame_path)
+
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-ss",
+            str(frame_time),
+            "-i",
+            str(video_path),
+            "-frames:v",
+            "1",
+            "-q:v",
+            "2",
+            str(frame_path),
+        ]
+
+        try:
+            subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as e:
+            # Clean up any frames we've extracted so far
+            for f in frames:
+                f.frame_path.unlink(missing_ok=True)
+            frame_path.unlink(missing_ok=True)
+            raise FrameExtractionError(f"ffmpeg failed: {e.stderr}") from e
+
+        if not frame_path.exists() or frame_path.stat().st_size == 0:
+            for f in frames:
+                f.frame_path.unlink(missing_ok=True)
+            frame_path.unlink(missing_ok=True)
+            raise FrameExtractionError("ffmpeg produced no output")
+
+        frames.append(
+            ExtractionResult(
+                frame_path=frame_path,
+                duration=duration,
+                frame_time=frame_time,
+            )
+        )
+
+    return MultiFrameExtractionResult(
+        frames=frames,
+        duration=duration,
     )

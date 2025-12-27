@@ -45,7 +45,7 @@ api:
 detection:
   model: "yolo11n.pt"         # YOLO model (downloaded automatically)
   confidence_threshold: 0.5   # Minimum detection confidence
-  frame_time: 6.0             # Extract frame at this time (or 50% if shorter)
+  frame_times: [6.0, 8.0]     # Check these times for birds (or 50% if shorter)
   min_area_percent: 0.5       # Optional: ignore birds smaller than this % of frame
   max_area_percent: 50.0      # Optional: ignore birds larger than this % of frame
 

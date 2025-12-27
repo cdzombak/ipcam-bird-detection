@@ -12,8 +12,9 @@ detection:
   model: "yolo11n.pt"
   # Minimum confidence threshold for bird detections (0.0 - 1.0)
   confidence_threshold: 0.5
-  # Target frame time in seconds (uses 50% of duration if video is shorter)
-  frame_time: 6.0
+  # Frame times to check for birds (uses 50% of duration if video is shorter)
+  # Can be a single value or a list; if any frame has a bird, video has a bird
+  frame_times: [6.0, 8.0]
   # Optional: filter detections by bird size (as % of frame area)
   # min_area_percent: 0.5   # Ignore birds smaller than 0.5% of frame
   # max_area_percent: 50.0  # Ignore birds larger than 50% of frame
