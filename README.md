@@ -36,6 +36,39 @@ python main.py --test-video /path/to/video.mp4
 - `-c, --config` — config file path (default: `./config.yaml`)
 - `-v, --verbose` — enable debug logging
 - `--test-video` — test detection on a local video file
+- `--version` — show version and exit
+
+## Docker
+
+Docker images are available for `linux/amd64` and `linux/arm64`:
+
+```bash
+docker pull cdzombak/ipcam-bird-detection:latest
+```
+
+Run with a config file and data directory mounted:
+
+```bash
+docker run --rm \
+  -v /path/to/config.yaml:/data/config.yaml:ro \
+  -v /path/to/data:/data \
+  cdzombak/ipcam-bird-detection:latest
+```
+
+The container expects:
+
+- Config file at `/data/config.yaml`
+- Database will be written to `/data/` (configure `database.path` accordingly)
+- Output videos saved to `/data/` (configure `outputs.directory` accordingly)
+
+Example config for Docker:
+
+```yaml
+database:
+  path: "/data/bird_detections.db"
+outputs:
+  directory: "/data/bird_videos"
+```
 
 ## Configuration
 
