@@ -12,6 +12,9 @@ from config import load_config
 from database import Database
 from pipeline import DetectionPipeline
 
+# Version is injected at build time by the Dockerfile
+VERSION = "<dev>"
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -184,7 +187,9 @@ def run_batch(config, pipeline: DetectionPipeline) -> int:
             stats = db.get_stats()
             logger.info("=" * 50)
             logger.info("Processing complete")
-            logger.info(f"  Processed this run: {success_count} success, {fail_count} failed")
+            logger.info(
+                f"  Processed this run: {success_count} success, {fail_count} failed"
+            )
             logger.info(f"  Total in database: {stats['total']}")
             logger.info(f"  Videos with birds: {stats['birds_found']}")
             logger.info(f"  Videos without birds: {stats['no_birds']}")
@@ -196,6 +201,11 @@ def main() -> int:
     """Main entry point."""
     parser = argparse.ArgumentParser(
         description="Detect birds in IP camera videos",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {VERSION}",
     )
     parser.add_argument(
         "-c",

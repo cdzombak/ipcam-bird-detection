@@ -1,0 +1,11 @@
+venv/
+*.py
+*.pt
+*.db
+*.mp4
+*.jpg
+*.jpeg
+*.png
+testdata/
+bird_videos/
+runs/

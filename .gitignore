@@ -80,3 +80,7 @@ config.yaml
 
 # YOLO
 runs/
+
+# Test/output directories
+testdata/
+bird_videos/
