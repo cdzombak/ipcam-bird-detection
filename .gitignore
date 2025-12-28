@@ -82,5 +82,8 @@ config.yaml
 runs/
 
 # Test/output directories
-testdata/
 bird_videos/
+
+# Allow testdata to be tracked (negates *.mp4 etc. patterns above)
+!testdata/
+!testdata/**
