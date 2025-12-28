@@ -78,16 +78,24 @@ class BirdDetector:
                 area_percent = (bird_area / frame_area) * 100
 
                 # Filter by area thresholds
-                if self.min_area_percent is not None and area_percent < self.min_area_percent:
+                if (
+                    self.min_area_percent is not None
+                    and area_percent < self.min_area_percent
+                ):
                     continue
-                if self.max_area_percent is not None and area_percent > self.max_area_percent:
+                if (
+                    self.max_area_percent is not None
+                    and area_percent > self.max_area_percent
+                ):
                     continue
 
-                birds.append({
-                    "confidence": conf,
-                    "area_percent": area_percent,
-                    "area": bird_area,
-                })
+                birds.append(
+                    {
+                        "confidence": conf,
+                        "area_percent": area_percent,
+                        "area": bird_area,
+                    }
+                )
 
         if not birds:
             return DetectionResult(has_bird=False)

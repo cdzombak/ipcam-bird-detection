@@ -97,7 +97,8 @@ class DetectionPipeline:
                         detection.bird_area_percent is not None
                         and (
                             best_detection.bird_area_percent is None
-                            or detection.bird_area_percent > best_detection.bird_area_percent
+                            or detection.bird_area_percent
+                            > best_detection.bird_area_percent
                         )
                     ):
                         best_detection = detection
@@ -115,7 +116,9 @@ class DetectionPipeline:
                 return PipelineResult(
                     has_bird=False,
                     video_duration=extraction.duration,
-                    frame_time=extraction.frames[0].frame_time if extraction.frames else None,
+                    frame_time=extraction.frames[0].frame_time
+                    if extraction.frames
+                    else None,
                 )
 
         except Exception as e:
